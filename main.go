@@ -24,15 +24,15 @@ func main() {
 			continue
 		}
 
-		switch message {
-		case "hello1":
-			reply(writer, id, "world1")
-		case "hello2":
-			reply(writer, id, "world2")
-		case "hello3":
-			reply(writer, id, "world3")
-		}
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					reply(writer, -id, fmt.Sprintf("panic: %v", r))
+				}
+			}()
 
+			handleMessage(writer, id, message)
+		}()
 	}
 }
 
@@ -48,6 +48,6 @@ func parseRequest(s string) (int, string, error) {
 	return id, parts[1], nil
 }
 
-func reply(w io.Writer, id int, message string) {
+func reply(w io.Writer, id int, message any) {
 	fmt.Fprintf(w, "%d,%s\n", id, message)
 }

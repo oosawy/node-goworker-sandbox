@@ -8,7 +8,7 @@ class Worker extends EventEmitter {
 
     this._messageId = 1
 
-    this.process = childprocess.spawn('go', ['run', 'main.go'])
+    this.process = childprocess.spawn('go', ['run', '.'])
     this.process.stderr.pipe(process.stderr)
     this.process.on('exit', () => {
       this.emit('exit')
@@ -33,14 +33,11 @@ class Worker extends EventEmitter {
   }
 
   async call(message) {
-    if (message.includes('\n'))
-      throw new Error('message cannot contain newline')
-
     const id = this._messageId++
-    this.process.stdin.write(id + ',' + message + '\n')
+    this.process.stdin.write(id + ',' + JSON.stringify(message) + '\n')
 
     for await (const [replyId, reply] of on(this, '_reply')) {
-      if (replyId == id) return reply
+      if (replyId == id) return JSON.parse(reply)
       if (replyId == -id) throw new Error(reply)
     }
   }
@@ -59,8 +56,8 @@ worker.on('exit', () => {
 console.log(
   'result',
   await Promise.allSettled([
-    worker.call('hello1'),
-    worker.call('hello2'),
-    worker.call('hello3'),
+    worker.call({ type: 0, name: 'bob' }),
+    worker.call({ type: 0, name: 'alice' }),
+    worker.call({ type: 0, name: 'charlie' }),
   ])
 )
